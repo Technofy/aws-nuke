@@ -8,6 +8,25 @@ import (
 
 type ItemState int
 
+func (s ItemState) String() string {
+	switch s {
+	case ItemStateNew:
+		return "new"
+	case ItemStatePending:
+		return "pending"
+	case ItemStateWaiting:
+		return "waiting"
+	case ItemStateFailed:
+		return "failed"
+	case ItemStateFiltered:
+		return "filtered"
+	case ItemStateFinished:
+		return "finished"
+	default:
+		return "unknown"
+	}
+}
+
 // States of Items based on the latest request to AWS.
 const (
 	ItemStateNew ItemState = iota
@@ -28,23 +47,11 @@ type Item struct {
 
 	Region Region
 	Type   string
+	Printer ItemPrinter
 }
 
 func (i *Item) Print() {
-	switch i.State {
-	case ItemStateNew:
-		Log(i.Region, i.Type, i.Resource, ReasonWaitPending, "would remove")
-	case ItemStatePending:
-		Log(i.Region, i.Type, i.Resource, ReasonWaitPending, "triggered remove")
-	case ItemStateWaiting:
-		Log(i.Region, i.Type, i.Resource, ReasonWaitPending, "waiting")
-	case ItemStateFailed:
-		Log(i.Region, i.Type, i.Resource, ReasonError, "failed")
-	case ItemStateFiltered:
-		Log(i.Region, i.Type, i.Resource, ReasonSkip, i.Reason)
-	case ItemStateFinished:
-		Log(i.Region, i.Type, i.Resource, ReasonSuccess, "removed")
-	}
+	i.Printer.PrintItem(i)
 }
 
 // List gets all resource items of the same resource type like the Item.

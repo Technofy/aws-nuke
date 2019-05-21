@@ -67,6 +67,14 @@ func NewRootCommand() *cobra.Command {
 		"Enables debug output.")
 
 	command.PersistentFlags().StringVarP(
+		&params.Format, "format", "f", "text",
+		"Output the result to a specific format (eg json, yaml, text).")
+
+	command.PersistentFlags().StringVarP(
+		&params.OutputFile, "output", "o", "",
+		"Output the report to a file.")
+
+	command.PersistentFlags().StringVarP(
 		&params.ConfigPath, "config", "c", "",
 		"(required) Path to the nuke config file.")
 

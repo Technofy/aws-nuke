@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/rebuy-de/aws-nuke/pkg/awsutil"
@@ -151,6 +153,27 @@ func (n *Nuke) Scan() error {
 		},
 	)
 
+	var printer ItemPrinter
+	var err error
+	var output io.Writer
+	if n.Parameters.OutputFile == "" {
+		output = os.Stdout
+	} else {
+		output, err = os.Create(n.Parameters.OutputFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch n.Parameters.Format {
+	case "json":
+		printer = NewJsonItemPrinter(output)
+	case "yaml":
+		printer = NewYamlItemPrinter(output)
+	case "text":
+		printer = NewLogItemPrinter(output)
+	}
+
 	queue := make(Queue, 0)
 
 	for _, regionName := range n.Config.Regions {
@@ -164,7 +187,7 @@ func (n *Nuke) Scan() error {
 			Session: sess,
 		}
 
-		items := Scan(region, resourceTypes)
+		items := Scan(region, resourceTypes, printer)
 		for item := range items {
 			queue = append(queue, item)
 			err := n.Filter(item)
@@ -175,6 +198,8 @@ func (n *Nuke) Scan() error {
 			item.Print()
 		}
 	}
+
+	printer.Flush()
 
 	fmt.Printf("Scan complete: %d total, %d nukeable, %d filtered.\n\n",
 		queue.CountTotal(), queue.Count(ItemStateNew), queue.Count(ItemStateFiltered))

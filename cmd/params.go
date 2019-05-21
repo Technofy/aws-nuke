@@ -7,6 +7,8 @@ import (
 
 type NukeParameters struct {
 	ConfigPath string
+	Format     string
+	OutputFile string
 
 	Targets  []string
 	Excludes []string
@@ -23,5 +25,15 @@ func (p *NukeParameters) Validate() error {
 		return fmt.Errorf("You have to specify the --config flag.\n")
 	}
 
-	return nil
+	p.Format = strings.TrimSpace(p.Format)
+	switch p.Format {
+	case "json":
+		fallthrough
+	case "yaml":
+		fallthrough
+	case "text":
+		return nil
+	default:
+		return fmt.Errorf("Unknown output format\n")
+	}
 }

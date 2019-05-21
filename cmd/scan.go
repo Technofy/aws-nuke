@@ -14,10 +14,11 @@ import (
 
 const ScannerParallelQueries = 16
 
-func Scan(region Region, resourceTypes []string) <-chan *Item {
+func Scan(region Region, resourceTypes []string, printer ItemPrinter) <-chan *Item {
 	s := &scanner{
 		items:     make(chan *Item, 100),
 		semaphore: semaphore.NewWeighted(ScannerParallelQueries),
+		printer:   printer,
 	}
 	go s.run(region, resourceTypes)
 
@@ -27,6 +28,7 @@ func Scan(region Region, resourceTypes []string) <-chan *Item {
 type scanner struct {
 	items     chan *Item
 	semaphore *semaphore.Weighted
+	printer   ItemPrinter
 }
 
 func (s *scanner) run(region Region, resourceTypes []string) {
@@ -79,6 +81,7 @@ func (s *scanner) list(region Region, resourceType string) {
 			Resource: r,
 			State:    ItemStateNew,
 			Type:     resourceType,
+			Printer:  s.printer,
 		}
 	}
 }

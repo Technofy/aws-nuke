@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"github.com/rebuy-de/aws-nuke/pkg/types"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -19,6 +20,7 @@ func init() {
 type S3Bucket struct {
 	svc  *s3.S3
 	name string
+	tags []*s3.Tag
 }
 
 func ListS3Buckets(s *session.Session) ([]Resource, error) {
@@ -31,10 +33,14 @@ func ListS3Buckets(s *session.Session) ([]Resource, error) {
 
 	resources := make([]Resource, 0)
 	for _, name := range buckets {
-		resources = append(resources, &S3Bucket{
+		b := S3Bucket{
 			svc:  svc,
 			name: name,
-		})
+		}
+
+		getBucketTags(svc, &b)
+
+		resources = append(resources, &b)
 	}
 
 	return resources, nil
@@ -59,10 +65,18 @@ func DescribeS3Buckets(svc *s3.S3) ([]string, error) {
 		if location == region {
 			buckets = append(buckets, *out.Name)
 		}
-
 	}
 
 	return buckets, nil
+}
+
+func getBucketTags(svc *s3.S3, bucket *S3Bucket) {
+	bucketTaggingResponse, err := svc.GetBucketTagging(&s3.GetBucketTaggingInput{
+		Bucket: aws.String(bucket.name),
+	})
+	if err == nil {
+		bucket.tags = bucketTaggingResponse.TagSet
+	}
 }
 
 func (e *S3Bucket) Remove() error {
@@ -96,6 +110,14 @@ func (e *S3Bucket) Remove() error {
 	})
 
 	return err
+}
+
+func (e *S3Bucket) Properties() types.Properties {
+	properties := types.NewProperties()
+	for _, tagValue := range e.tags {
+		properties.SetTag(tagValue.Key, tagValue.Value)
+	}
+	return properties
 }
 
 func (e *S3Bucket) RemoveAllVersions() error {
